@@ -23,11 +23,14 @@ class LoaderUtility:
             if ext.lower() not in p_valid_formats:
                 continue
 
-            #Get Grayscale images
-            labels.append(self.GetLabelIndexFromImages(f, p_define_label))
+            #Append Labels only if its exist
+            if (len(p_define_label) > 0):
+                labels.append(self.GetLabelIndexFromImages(f, p_define_label))
 
+            #Get Grayscale images
             image = cv2.imread(p_path+f, cv2.IMREAD_GRAYSCALE)
             # image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+
             if p_normalized:
                 image = image / 255
 
@@ -83,4 +86,10 @@ class LoaderUtility:
 
         newImage = Image.new(mode, (canvas_width, canvas_height), new_background)
         newImage.paste(im, (x1, y1, x1 + old_width, y1 + old_height))
+
+        if (old_height > canvas_height or old_width > canvas_width or ( abs(old_height - old_width) < 50)):
+            wpercent = (canvas_width / old_width)
+            hsize = int((float(old_height) * float(wpercent)))
+            newImage = im.resize((canvas_width, hsize), Image.ANTIALIAS)
+
         newImage.save(new_image_path)
