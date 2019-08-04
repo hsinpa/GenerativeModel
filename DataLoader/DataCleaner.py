@@ -35,5 +35,5 @@ print(allImageArray)
 
 for path in allImageArray:
     lastIndex = path.rindex("/") + 1
-    newFileName = resizeFolder + path[lastIndex:]
-    loader.resize_canvas(path, newFileName, canvas_width=512, canvas_height=512)
+    newFileName = resizeFolder + path[lastIndex:-3] + "jpeg"
+    loader.resize_canvas(path, newFileName, img_type="jpeg", canvas_width=256, canvas_height=256)

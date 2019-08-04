@@ -8,13 +8,25 @@ from typing import List
 
 class LoaderUtility:
 
+    def GetRawImageFromPath(self, p_path: str, p_valid_formats: List[str]):
+        path = []
+
+        for f in os.listdir(p_path):
+            ext = os.path.splitext(f)[1]
+            if ext.lower() not in p_valid_formats:
+                continue
+
+            path.append(p_path + f)
+
+        return path
+
     def GetLabelIndexFromImages(self, image_name: str, labels):
         label_s_index = image_name.rfind("_") + 1
 
         label = image_name[label_s_index:-4]
         return labels.index(label)
 
-    def GetImageFromPath(self, p_path: str, p_valid_formats: List[str], p_define_label: List[str], p_normalized: bool):
+    def GetDatasetFromPath(self, p_path: str, p_valid_formats: List[str], p_define_label: List[str], p_normalizedFunc):
         imgs = []
         labels = []
 
@@ -24,15 +36,12 @@ class LoaderUtility:
                 continue
 
             #Append Labels only if its exist
-            if (len(p_define_label) > 0):
+            if (p_define_label == None and len(p_define_label) > 0):
                 labels.append(self.GetLabelIndexFromImages(f, p_define_label))
 
-            #Get Grayscale images
-            image = cv2.imread(p_path+f, cv2.IMREAD_GRAYSCALE)
-            # image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-
-            if p_normalized:
-                image = image / 255
+            image = cv2.imread(p_path+f,  cv2.COLOR_BGR2RGB)
+            if p_normalizedFunc != None:
+                image = p_normalizedFunc(image)
 
             imgs.append(image)
         return np.asarray(imgs), np.asarray(labels)
@@ -54,8 +63,13 @@ class LoaderUtility:
         newImgs.append(cv2.flip(raw_image, -1))
         return newImgs
 
+    def Normalized(self, image):
+        return image / 255
 
-    def resize_canvas(self, old_image_path : str ="314.jpg", new_image_path : str ="save.jpg",
+    def TanhNormalized(self, image):
+        return (image - 127.5) / 127.5
+
+    def resize_canvas(self, old_image_path : str ="314.jpg", new_image_path : str ="save.jpg", img_type : str = "JPEG",
                       canvas_width : int =500, canvas_height : int =500):
         """
         Resize the canvas of old_image_path.
@@ -72,11 +86,9 @@ class LoaderUtility:
         im = Image.open(old_image_path)
         old_width, old_height = im.size
 
-        # Center the image
-        x1 = int(math.floor((canvas_width - old_width) / 2))
-        y1 = int(math.floor((canvas_height - old_height) / 2))
-
         mode = im.mode
+
+        new_background = (255, 255, 255)
         if len(mode) == 1:  # L, 1
             new_background = (255)
         if len(mode) == 3:  # RGB
@@ -84,12 +96,22 @@ class LoaderUtility:
         if len(mode) == 4:  # RGBA, CMYK
             new_background = (255, 255, 255, 255)
 
-        newImage = Image.new(mode, (canvas_width, canvas_height), new_background)
-        newImage.paste(im, (x1, y1, x1 + old_width, y1 + old_height))
-
         if (old_height > canvas_height or old_width > canvas_width or ( abs(old_height - old_width) < 50)):
             wpercent = (canvas_width / old_width)
             hsize = int((float(old_height) * float(wpercent)))
-            newImage = im.resize((canvas_width, hsize), Image.ANTIALIAS)
+            im = im.resize((canvas_width, hsize), Image.ANTIALIAS)
 
-        newImage.save(new_image_path)
+            hpercent = (canvas_height / old_height)
+            wsize = int((float(old_width) * float(hpercent)))
+            im = im.resize((wsize, canvas_height), Image.ANTIALIAS)
+
+        old_width, old_height = im.size
+
+        # Center the image
+        x1 = int(math.floor((canvas_width - old_width) / 2))
+        y1 = int(math.floor((canvas_height - old_height) / 2))
+
+        newImage = Image.new("RGB", (canvas_width, canvas_height), new_background)
+        newImage.paste(im, (x1, y1, x1 + old_width, y1 + old_height), im)
+
+        newImage.save(new_image_path, img_type)

@@ -1,40 +1,34 @@
 from DCGAN.TouhouGenerator import TouhouGenerator
-import matplotlib.pyplot as plt
-import tensorflow as tf
+from DataLoader.ImageUtility import ImageUtility
+from DataLoader.LoaderUtility import LoaderUtility
 import numpy as np
+import matplotlib.pyplot as plt
 
+resizeFolder = "../Dataset/TouhouDataset/ResizeFolder/"
+valid_images = [".jpg",".png", ".jpeg"]
 
-def sample_images(generator, z_dim, image_grid_rows=4, image_grid_columns=4):
-    # Sample random noise
-    z = np.random.normal(0, 1, (image_grid_rows * image_grid_columns, z_dim))
+img_rows = 256
+img_cols = 256
+channels = 3
+img_shape = (img_rows, img_cols, channels)
 
-    # Generate images from random noise
-    gen_imgs = generator.predict(z)
+z_dim = 100
 
-    # Rescale image pixel values to [0, 1]
-    gen_imgs = 0.5 * gen_imgs + 0.5
+iterations = 200
+batch_size = 16
+sample_interval = 10
 
-    # Set image grid
-    fig, axs = plt.subplots(image_grid_rows,
-                            image_grid_columns,
-                            figsize=(4, 4),
-                            sharey=True,
-                            sharex=True)
-
-    cnt = 0
-    for i in range(image_grid_rows):
-        for j in range(image_grid_columns):
-            # Output a grid of images
-            axs[i, j].imshow(gen_imgs[cnt, :, :, 0], cmap='gray')
-            axs[i, j].axis('off')
-            cnt += 1
-    plt.show()
-
-touhouGenerator = TouhouGenerator(5000)
-generator = touhouGenerator.make_generator_model()
+imageLoader = ImageUtility()
+loaderUtility = LoaderUtility()
+touhouGenerator = TouhouGenerator(5000, img_shape, z_dim)
 
 #noise = tf.random.normal([1, 100])
 #sample_images(generator, 100)
 # plt.imshow(generated_image[0, :, :, 0])
 # plt.show()
 
+touhouImageSet = loaderUtility.GetDatasetFromPath(resizeFolder, valid_images, [], loaderUtility.TanhNormalized)[0]
+
+touhouGenerator.train(touhouImageSet, iterations, batch_size, sample_interval)
+
+imageLoader.sample_images(touhouGenerator.generator, z_dim)
